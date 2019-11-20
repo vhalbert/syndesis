@@ -21,23 +21,28 @@ server:
 # See https://docs.spring.io/spring-boot/docs/current/reference/html/production-ready-monitoring.html
 # For details
 management:
-  port: 8080
-  security:
-    enabled: true
+  server:
+    port: 8080
+    ssl:
+      enabled: true
   metrics:
     web:
       server:
         auto-time-requests: false
-
-endpoints:
-  enabled: false
-  health:
-    sensitive: false
-    enabled: true
-  prometheus:
-    id: metrics
-    sensitive: false
-    enabled: true
+  endpoints:
+    enabled-by-default: false
+    web:
+      exposure:
+        include:
+          -health
+          -prometheus
+      path-mapping:
+        prometheus: metrics
+  endpoint:
+    health:
+      enabled: true
+    prometheus:
+      enabled: true
 
 # disable non needed auto-configuration
 spring:

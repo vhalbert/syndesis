@@ -37,19 +37,33 @@ server:
     workerThreads: 10
 
 management:
-  port: 8181
+  server:
+    port: 8181
+    ssl:
+      enabled: true
   undertow:
     ioThreads: 1
     workerThreads: 1
   health:
     db:
       enabled: false
-  security:
-    enabled: true
   metrics:
     web:
       server:
         auto-time-requests: false
+  endpoints:
+    web:
+      path-mapping:
+        prometheus: metrics
+  endpoint:
+    health:
+      enabled: true
+    jsondb:
+      enabled: true
+    metrics:
+      enabled: false
+    prometheus:
+      enabled: true
 
 cors:
   allowedOrigins: "*"
@@ -72,18 +86,6 @@ spring:
 security:
   basic:
     enabled: false
-
-endpoints:
-  health:
-    sensitive: false
-  jsondb:
-    enabled: true
-  metrics:
-    enabled: false
-  prometheus:
-    id: metrics
-    sensitive: false
-    enabled: true
 
 dao:
   kind: jsondb
