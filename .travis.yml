@@ -1,0 +1,50 @@
+language: java
+sudo: required
+
+services:
+- docker
+git:
+  depth: 1
+
+cache:
+  directories:
+  - "$HOME/.m2"
+
+before_install:
+  - rm -rf $HOME/.m2/repository/io/syndesis/dv*
+
+install: mvn install -DskipTests=true -Dmaven.javadoc.skip=true -B -V -Dorg.slf4j.simpleLogger.defaultLogLevel=error -Pimage -Dfabric8.mode=kubernetes
+
+before_script:
+  
+script: mvn test -B -V -q 
+
+after_success:
+  - |
+    if [[ ( "$TRAVIS_BRANCH" == "master" ) && ( "$TRAVIS_PULL_REQUEST" == "false" ) && (-n "$DOCKER_USERNAME") ]]; then
+      echo "pushing to image to docker";
+      docker login -u $DOCKER_USERNAME -p $DOCKER_PASSWORD ;
+      docker push teiid/syndesis-dv:latest ;
+    fi
+
+  - |
+    if [[ ( "$TRAVIS_BRANCH" != "master" ) && ( "$TRAVIS_PULL_REQUEST" == "false" ) && (-n "$DOCKER_USERNAME") ]]; then
+      echo "pushing to image to docker";
+      docker login -u $DOCKER_USERNAME -p $DOCKER_PASSWORD ;
+      TAG=$(mvn help:evaluate -Dexpression=project.version -q -DforceStdout) ;
+      TAG=`echo $TAG | cut -d'-' -f 1` ;
+      TAGD="$TAG-$(date +"%Y%m%d")";
+      echo $TAG $TAGD;
+      docker images;
+      docker push teiid/syndesis-dv:$TAG;
+      docker tag teiid/syndesis-dv:$TAG teiid/syndesis-dv:$TAGD;
+      docker push teiid/syndesis-dv:$TAGD;
+    fi
+
+notifications:
+  webhooks:
+    urls:
+      - https://webhooks.gitter.im/e/5ada7bbc05b2a99cff40
+    on_success: change
+    on_failure: always
+    on_start: never
