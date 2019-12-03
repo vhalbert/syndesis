@@ -299,7 +299,7 @@ extract_modules() {
     fi
 
     if [ "$(hasflag --all-images)" ]; then
-        modules="$modules ui-react server meta s2i operator dv"
+        modules="$modules ui-react server meta s2i operator"
     fi
 
     if [ "$(hasflag --app-images)" ]; then
