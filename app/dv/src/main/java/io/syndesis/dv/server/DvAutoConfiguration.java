@@ -27,6 +27,8 @@ import io.syndesis.dv.openshift.SyndesisConnectionSynchronizer;
 import io.syndesis.dv.openshift.TeiidOpenShiftClient;
 import io.syndesis.dv.repository.RepositoryManagerImpl;
 
+import org.apache.commons.logging.Log;
+import org.apache.commons.logging.LogFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnMissingBean;
@@ -47,13 +49,19 @@ import org.springframework.web.servlet.config.annotation.WebMvcConfigurer;
 import org.teiid.runtime.EmbeddedConfiguration;
 
 import io.syndesis.dv.RepositoryManager;
+import io.syndesis.dv.lsp.TeiidDdlLanguageServer;
 
 @Configuration
 @EnableConfigurationProperties({DvConfigurationProperties.class, SpringMavenProperties.class})
 @ComponentScan(basePackageClasses = {RepositoryManagerImpl.class, DefaultMetadataInstance.class, SyndesisConnectionSynchronizer.class})
 @EnableAsync
 public class DvAutoConfiguration implements ApplicationListener<ContextRefreshedEvent>, AsyncConfigurer {
-
+    private static final Log LOGGER = LogFactory.getLog(DvAutoConfiguration.class);
+    
+	private static final String LSP_DEFAULT_HOSTNAME = "localhost"; // syndesis-dv:????
+    private static final int LSP_DEFAULT_PORT = 8025;
+    private static final String LSP_DEFAULT_CONTEXT_PATH = "/";
+    
     @Value("${encrypt.key}")
     private String encryptKey;
 
@@ -71,6 +79,9 @@ public class DvAutoConfiguration implements ApplicationListener<ContextRefreshed
 
     @Autowired
     private MetadataInstance metadataInstance;
+    
+//    @Autowired
+//    private TeiidDdlLanguageServer server;
 
     private ScheduledThreadPoolExecutor executor = new ScheduledThreadPoolExecutor(1);
 
@@ -88,6 +99,8 @@ public class DvAutoConfiguration implements ApplicationListener<ContextRefreshed
     public void onApplicationEvent(ContextRefreshedEvent event) {
         try {
             repositoryManager.findDataVirtualization("x");
+            LOGGER.info("   #####################  DvAutoConfiguration.onApplicationEvent() initialize teiidDdlLanguageServer()");
+            teiidDdlLanguageServer();
         } catch (Exception e) {
             throw new RuntimeException(e);
         }
@@ -97,6 +110,7 @@ public class DvAutoConfiguration implements ApplicationListener<ContextRefreshed
     @ConditionalOnMissingBean
     public TeiidServer teiidServer() {
 
+        LOGGER.info("   ---->>>>>>>  DvAutoConfiguration.teiidServer() initialize");
         // turning off PostgreSQL support
         System.setProperty("org.teiid.addPGMetadata", "false");
         System.setProperty("org.teiid.hiddenMetadataResolvable", "true");
@@ -109,6 +123,9 @@ public class DvAutoConfiguration implements ApplicationListener<ContextRefreshed
             config.setTransactionManager(this.transactionManager);
         }
         server.start(config);
+        
+//        teiidDdlLanguageServer();
+        
         return server;
     }
 
@@ -127,6 +144,25 @@ public class DvAutoConfiguration implements ApplicationListener<ContextRefreshed
                 configurer.setTaskExecutor(getAsyncExecutor());
             }
         };
+    }
+    
+//    @Bean
+//    @ConditionalOnMissingBean
+    public TeiidDdlLanguageServer teiidDdlLanguageServer() {
+
+    	TeiidDdlLanguageServer server = new TeiidDdlLanguageServer();
+
+        String hostname = LSP_DEFAULT_HOSTNAME;
+        int port = LSP_DEFAULT_PORT;
+        String contextPath = LSP_DEFAULT_CONTEXT_PATH;
+
+        LOGGER.info("   #####################  DvAutoConfiguration.teiidDdlLanguageServer() Host:Port = " + hostname + ":" + port);
+
+        server.startServer();
+
+        server.getTextDocumentService();
+        
+        return server;
     }
 
     @Override
